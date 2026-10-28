@@ -1,6 +1,6 @@
 """Mark an answer against a task's rubric."""
 
-from grader.checks import run_check
+from grader.checks import CHECKS, run_check
 from grader.judge import ask_judge
 from grader.llm import Model
 
@@ -39,3 +39,23 @@ def grade_answer(task: dict, answer: str, judge: Model | None = None) -> dict:
         "score": round(earned / possible, 3),
         "results": results,
     }
+
+
+def validate_criterion(check_type: str, params: dict) -> None:
+    """Raise ValueError if a criterion couldn't be marked as written.
+
+    Used before a rubric is saved, so mistakes show up straight away rather
+    than part way through a run.
+    """
+    if check_type == "judge":
+        if params:
+            raise ValueError("Judge criteria take no params: the description is the requirement")
+        return
+    if check_type not in CHECKS:
+        raise ValueError(f"Unknown check type: {check_type}")
+    # A dry run on an empty answer catches missing or misspelt params, values
+    # of the wrong type and broken regular expressions.
+    try:
+        run_check(check_type, "", params)
+    except Exception as error:
+        raise ValueError(f"Bad params for {check_type}: {error}") from error

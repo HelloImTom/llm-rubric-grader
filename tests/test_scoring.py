@@ -1,7 +1,7 @@
 import pytest
 
 from grader.llm import FakeModel
-from grader.scoring import grade_answer
+from grader.scoring import grade_answer, validate_criterion
 
 TASK = {
     "prompt": "What is the capital of Australia? Answer in one short sentence.",
@@ -74,3 +74,33 @@ def test_judge_criteria_go_to_the_judge_model():
 def test_judge_criteria_need_a_judge_model():
     with pytest.raises(ValueError, match="needs a judge model"):
         grade_answer(JUDGED_TASK, "Any answer")
+
+
+@pytest.mark.parametrize(
+    "check_type, params",
+    [
+        ("includes", {"text": "Canberra"}),
+        ("max_words", {"limit": 120}),
+        ("valid_json", {"keys": ["title", "author"]}),
+        ("british_spelling", {}),
+        ("judge", {}),
+    ],
+)
+def test_validate_criterion_accepts_working_criteria(check_type, params):
+    validate_criterion(check_type, params)  # raises if anything is wrong
+
+
+@pytest.mark.parametrize(
+    "check_type, params, message",
+    [
+        ("spellcheck", {}, "Unknown check type"),
+        ("max_words", {}, "Bad params for max_words"),
+        ("max_words", {"limit": "ten"}, "Bad params for max_words"),
+        ("includes", {"txt": "Canberra"}, "Bad params for includes"),
+        ("matches", {"pattern": "("}, "Bad params for matches"),
+        ("judge", {"text": "Canberra"}, "take no params"),
+    ],
+)
+def test_validate_criterion_rejects_broken_criteria(check_type, params, message):
+    with pytest.raises(ValueError, match=message):
+        validate_criterion(check_type, params)
