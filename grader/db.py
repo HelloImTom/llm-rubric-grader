@@ -89,3 +89,36 @@ def list_tasks(conn: sqlite3.Connection) -> list[dict]:
         """
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def save_run(
+    conn: sqlite3.Connection, model: str, judge: str | None, answers: list[dict]
+) -> int:
+    """Save a finished run in one transaction and return its id.
+
+    Each answer is a dict with the "task_id", the answer "text" and the
+    "results" that grade_answer produced for it.
+    """
+    with conn:
+        cursor = conn.execute(
+            "INSERT INTO runs (model, judge) VALUES (?, ?)",
+            (model, judge),
+        )
+        run_id = cursor.lastrowid
+        for answer in answers:
+            cursor = conn.execute(
+                "INSERT INTO answers (run_id, task_id, text) VALUES (?, ?, ?)",
+                (run_id, answer["task_id"], answer["text"]),
+            )
+            answer_id = cursor.lastrowid
+            conn.executemany(
+                """
+                INSERT INTO results (answer_id, criterion_id, passed, detail)
+                VALUES (?, ?, ?, ?)
+                """,
+                [
+                    (answer_id, result["id"], result["passed"], result["detail"])
+                    for result in answer["results"]
+                ],
+            )
+    return run_id
