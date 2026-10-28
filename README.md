@@ -1,5 +1,7 @@
 # LLM Rubric Grader
 
+[![Tests](https://github.com/HelloImTom/llm-rubric-grader/actions/workflows/tests.yml/badge.svg)](https://github.com/HelloImTom/llm-rubric-grader/actions/workflows/tests.yml)
+
 Sends prompts to a language model and marks each answer against a rubric, one criterion at a time, the way an examiner works through a mark scheme.
 
 Some criteria are plain rules: a word limit, a phrase that must appear, valid JSON, British spelling, no em dashes. Others need judgement, such as "explains the trade-off", so a second model marks them PASS or FAIL and gives its reason. Every mark is stored in SQLite with that reason, and SQL reports show where a model does well and where it falls down.
@@ -22,12 +24,34 @@ Claude Opus 5.5 answered, and the rubric marked it like this:
 
 Score: 6 out of 6.
 
+## What it covers
+
+### Python
+
+A package of small, typed modules, each with one job. The rule checks are plain functions looked up by name from a dictionary, so a rubric stored as text can find the code it needs. Models sit behind a `Protocol`, which makes the real Anthropic client and a test fake interchangeable, and the API is handed its database connection and models through dependency injection.
+
+### SQL
+
+SQLite with five tables (`tasks`, `criteria`, `runs`, `answers` and `results`), using foreign keys with cascading deletes, `CHECK` and `UNIQUE` constraints, a composite primary key, an index and a view. Every query is parameterised, and saving a task or a whole run happens in a single transaction. The reports in `reports.py` use joins, `GROUP BY`, `CASE` and `COALESCE`, and they average task scores so every task counts equally.
+
+### REST API
+
+A FastAPI app with eight endpoints. Pydantic validates every request, including a dry run of each rubric criterion before it's saved, and each kind of failure has its own status code: 400, 404, 409, 422 or 502. The interactive docs page at `/docs` comes filled in with working examples.
+
+### Automated tests
+
+88 pytest tests, using fixtures, parametrised cases, `monkeypatch`, a fake model and FastAPI's test client. They need no API key, cost nothing to run and give the same result every time. GitHub Actions runs them on every push.
+
+### LLM evaluation
+
+Answers come from Claude through Anthropic's Messages API, with the key kept in an environment variable. Each rubric mixes nine kinds of rule check with criteria marked by a second model acting as a judge. The judge sees one criterion at a time, and only a clear PASS earns the points. Reports give an overall score, a score for each task and a pass rate for each kind of check.
+
 ## Getting started
 
 You'll need Python 3.11 or later.
 
 ```
-git clone https://github.com/YOUR-USERNAME/llm-rubric-grader.git
+git clone https://github.com/HelloImTom/llm-rubric-grader.git
 cd llm-rubric-grader
 python -m venv .venv
 ```
