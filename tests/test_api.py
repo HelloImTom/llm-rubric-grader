@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from grader import db
 from grader.api import app, get_answer_model, get_conn, get_judge_model
 from grader.llm import FakeModel
+from grader.schemas import EXAMPLE_TASK
 
 TASK = {
     "name": "capital",
@@ -54,6 +55,16 @@ def test_a_task_can_be_created_and_read_back(client):
     assert client.get("/tasks").json() == [
         {"id": task["id"], "name": "capital", "criteria_count": 2, "total_points": 5}
     ]
+
+
+def test_the_root_sends_you_to_the_docs(client):
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
+
+
+def test_the_example_on_the_docs_page_works(client):
+    assert client.post("/tasks", json=EXAMPLE_TASK).status_code == 201
 
 
 def test_an_unknown_task_is_a_404(client):

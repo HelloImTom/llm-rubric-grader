@@ -14,45 +14,18 @@ from functools import cache
 import anthropic
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, model_validator
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from grader import db, reports
 from grader.llm import Model, model_from_env
 from grader.runner import run_tasks
-from grader.scoring import grade_answer, validate_criterion
+from grader.schemas import AnswerIn, RunIn, TaskIn
+from grader.scoring import grade_answer
 
 # Settings such as ANTHROPIC_API_KEY can live in a .env file.
 load_dotenv()
 
 app = FastAPI(title="LLM Rubric Grader")
-
-
-class CriterionIn(BaseModel):
-    description: str = Field(min_length=1)
-    check_type: str
-    params: dict = Field(default_factory=dict)
-    points: int = Field(default=1, gt=0)
-
-    @model_validator(mode="after")
-    def check_it_can_run(self):
-        validate_criterion(self.check_type, self.params)
-        return self
-
-
-class TaskIn(BaseModel):
-    name: str = Field(min_length=1)
-    prompt: str = Field(min_length=1)
-    criteria: list[CriterionIn] = Field(min_length=1)
-
-
-class AnswerIn(BaseModel):
-    answer: str
-
-
-class RunIn(BaseModel):
-    # Leave this out to run every task.
-    task_ids: list[int] | None = None
 
 
 def get_conn():
@@ -89,8 +62,15 @@ def find_task(conn: sqlite3.Connection, task_id: int) -> dict:
     return task
 
 
+@app.get("/", include_in_schema=False)
+def home():
+    # There's nothing to see at the root, so send people to the docs page.
+    return RedirectResponse("/docs")
+
+
 @app.post("/tasks", status_code=201)
 def create_task(task: TaskIn, conn: sqlite3.Connection = Depends(get_conn)):
+    """Save a task and its rubric. Every criterion is checked before anything is saved."""
     criteria = [criterion.model_dump() for criterion in task.criteria]
     try:
         task_id = db.add_task(conn, task.name, task.prompt, criteria)
@@ -103,11 +83,13 @@ def create_task(task: TaskIn, conn: sqlite3.Connection = Depends(get_conn)):
 
 @app.get("/tasks")
 def list_tasks(conn: sqlite3.Connection = Depends(get_conn)):
+    """List every task with the size of its rubric."""
     return db.list_tasks(conn)
 
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+    """Show one task and its rubric."""
     return find_task(conn, task_id)
 
 
@@ -139,11 +121,13 @@ def start_run(
 
 @app.get("/runs")
 def list_runs(conn: sqlite3.Connection = Depends(get_conn)):
+    """List every run with its overall score, newest first."""
     return reports.list_runs(conn)
 
 
 @app.get("/runs/{run_id}")
 def get_run(run_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+    """Show a run's scores: overall, by task and by check type."""
     report = reports.run_report(conn, run_id)
     if report is None:
         raise HTTPException(404, f"No run with id {run_id}")
@@ -152,6 +136,7 @@ def get_run(run_id: int, conn: sqlite3.Connection = Depends(get_conn)):
 
 @app.get("/runs/{run_id}/answers")
 def get_run_answers(run_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+    """Show each answer in a run with every mark and the reason for it."""
     answers = reports.run_answers(conn, run_id)
     if answers is None:
         raise HTTPException(404, f"No run with id {run_id}")
