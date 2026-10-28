@@ -48,3 +48,17 @@ CREATE TABLE IF NOT EXISTS results (
 -- by task. The other lookups are covered by the UNIQUE and PRIMARY KEY
 -- constraints above, which come with their own indexes.
 CREATE INDEX IF NOT EXISTS criteria_task_id ON criteria (task_id);
+
+-- Points earned and available for each answer. The reports build on this
+-- view, so the rule for adding up points lives in one place.
+CREATE VIEW IF NOT EXISTS answer_scores AS
+SELECT
+    answers.id AS answer_id,
+    answers.run_id,
+    answers.task_id,
+    SUM(CASE WHEN results.passed = 1 THEN criteria.points ELSE 0 END) AS earned,
+    SUM(criteria.points) AS possible
+FROM answers
+JOIN results ON results.answer_id = answers.id
+JOIN criteria ON criteria.id = results.criterion_id
+GROUP BY answers.id;
