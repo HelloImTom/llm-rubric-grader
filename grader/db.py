@@ -9,7 +9,10 @@ SCHEMA = Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
 
 def connect(path: str | Path) -> sqlite3.Connection:
     """Open the database, creating the tables first if they don't exist."""
-    conn = sqlite3.connect(path)
+    # When requests overlap, FastAPI can open a connection in one thread and
+    # use it in another, which SQLite refuses by default. Each request still
+    # gets its own connection, so switching that check off is safe here.
+    conn = sqlite3.connect(path, check_same_thread=False)
     # Lets rows be read by column name, like a dict.
     conn.row_factory = sqlite3.Row
     # SQLite only enforces foreign keys when asked, once per connection.
