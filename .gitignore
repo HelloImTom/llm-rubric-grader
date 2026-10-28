@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Local settings and data
+.env
+*.db
