@@ -1,0 +1,52 @@
+[
+  {
+    "name": "index-explainer",
+    "prompt": "Explain what a database index is to a junior developer, in under 120 words. Use British English.",
+    "criteria": [
+      {"description": "Under 120 words", "check_type": "max_words", "params": {"limit": 120}, "points": 1},
+      {"description": "British spelling", "check_type": "british_spelling", "points": 1},
+      {"description": "No em dashes", "check_type": "no_em_dashes", "points": 1},
+      {"description": "No stock AI phrases", "check_type": "no_ai_phrases", "points": 1},
+      {"description": "Says that indexes slow down writes or take up extra space", "check_type": "judge", "points": 2}
+    ]
+  },
+  {
+    "name": "late-delivery-email",
+    "prompt": "Write a short email to a customer, Ms Patel, apologising that her order will arrive two days late. Offer her the discount code LATE10 for 10% off her next order. Use British English and keep it under 150 words.",
+    "criteria": [
+      {"description": "Apologises", "check_type": "matches", "params": {"pattern": "(?i)sorry|apolog"}, "points": 1},
+      {"description": "Gives the discount code", "check_type": "includes", "params": {"text": "LATE10"}, "points": 2},
+      {"description": "Under 150 words", "check_type": "max_words", "params": {"limit": 150}, "points": 1},
+      {"description": "British spelling", "check_type": "british_spelling", "points": 1},
+      {"description": "No em dashes", "check_type": "no_em_dashes", "points": 1},
+      {"description": "Says the delay is two days and does not invent other details, such as a reason for the delay", "check_type": "judge", "points": 2}
+    ]
+  },
+  {
+    "name": "book-as-json",
+    "prompt": "Return a JSON object describing the novel Pride and Prejudice, with the keys title, author and year. Return only the JSON, with no other text.",
+    "criteria": [
+      {"description": "Valid JSON with title, author and year", "check_type": "valid_json", "params": {"keys": ["title", "author", "year"]}, "points": 3},
+      {"description": "Names Jane Austen", "check_type": "includes", "params": {"text": "Jane Austen"}, "points": 1},
+      {"description": "Gives the year 1813", "check_type": "includes", "params": {"text": "1813"}, "points": 1}
+    ]
+  },
+  {
+    "name": "capital-in-one-word",
+    "prompt": "What is the capital of Australia? Answer in one word.",
+    "criteria": [
+      {"description": "Names Canberra", "check_type": "includes", "params": {"text": "Canberra"}, "points": 2},
+      {"description": "One word only", "check_type": "max_words", "params": {"limit": 1}, "points": 1}
+    ]
+  },
+  {
+    "name": "function-naming-tips",
+    "prompt": "Give three tips for naming Python functions clearly, as a bulleted list. Keep it under 80 words.",
+    "criteria": [
+      {"description": "Uses a bulleted list", "check_type": "matches", "params": {"pattern": "(?m)^\\s*[-*] "}, "points": 1},
+      {"description": "Under 80 words", "check_type": "max_words", "params": {"limit": 80}, "points": 1},
+      {"description": "No stock AI phrases", "check_type": "no_ai_phrases", "points": 1},
+      {"description": "Every tip is about naming functions rather than general coding advice", "check_type": "judge", "points": 2}
+    ]
+  }
+]
