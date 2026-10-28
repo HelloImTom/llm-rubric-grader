@@ -75,3 +75,33 @@ def test_list_runs_puts_the_newest_first(conn):
 
     summary = [(run["model"], run["tasks"], run["score"]) for run in reports.list_runs(conn)]
     assert summary == [("model-b", 2, 1.0), ("model-a", 2, 0.75)]
+
+
+def test_run_answers_shows_every_mark_with_its_reason(conn):
+    add_tasks(conn)
+    run_id = run_tasks(conn, FakeModel("Canberra."))
+
+    answers = reports.run_answers(conn, run_id)
+
+    assert [answer["task"] for answer in answers] == ["capital", "apology"]
+    assert answers[1]["text"] == "Canberra."
+    assert answers[1]["results"] == [
+        {
+            "description": "Says sorry",
+            "check_type": "includes",
+            "points": 1,
+            "passed": False,
+            "detail": 'Missing "sorry"',
+        },
+        {
+            "description": "No em dashes",
+            "check_type": "no_em_dashes",
+            "points": 1,
+            "passed": True,
+            "detail": "No em dashes",
+        },
+    ]
+
+
+def test_an_unknown_run_has_no_answers(conn):
+    assert reports.run_answers(conn, 99) is None

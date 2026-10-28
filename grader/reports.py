@@ -88,3 +88,50 @@ def list_runs(conn: sqlite3.Connection) -> list[dict]:
         """
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def run_answers(conn: sqlite3.Connection, run_id: int) -> list[dict] | None:
+    """Each answer in a run, with every mark and the reason for it.
+
+    Returns None if there's no run with that id.
+    """
+    if conn.execute("SELECT 1 FROM runs WHERE id = ?", (run_id,)).fetchone() is None:
+        return None
+
+    answers = conn.execute(
+        """
+        SELECT answers.id, answers.task_id, tasks.name AS task, answers.text
+        FROM answers
+        JOIN tasks ON tasks.id = answers.task_id
+        WHERE answers.run_id = ?
+        ORDER BY answers.task_id
+        """,
+        (run_id,),
+    ).fetchall()
+    results = conn.execute(
+        """
+        SELECT
+            results.answer_id,
+            criteria.description,
+            criteria.check_type,
+            criteria.points,
+            results.passed,
+            results.detail
+        FROM results
+        JOIN answers ON answers.id = results.answer_id
+        JOIN criteria ON criteria.id = results.criterion_id
+        WHERE answers.run_id = ?
+        ORDER BY criteria.id
+        """,
+        (run_id,),
+    ).fetchall()
+
+    # Two queries for the whole run, matched up here, rather than a separate
+    # query for every answer.
+    by_answer = {row["id"]: {**dict(row), "results": []} for row in answers}
+    for row in results:
+        result = dict(row)
+        answer_id = result.pop("answer_id")
+        result["passed"] = bool(result["passed"])
+        by_answer[answer_id]["results"].append(result)
+    return list(by_answer.values())
